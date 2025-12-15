@@ -55,9 +55,20 @@ export async function GET(request: Request) {
     const results: Array<{ name: string; index: string; url: string }> =
       Array.isArray(listData?.results) ? listData.results : [];
 
-    const match = results.find(
-      (m) => m.name.toLowerCase() === name.toLowerCase()
-    );
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+    const inputLower = name.toLowerCase();
+    const inputSlug = normalize(name);
+
+    // Try several matching strategies: exact by name, exact by slug == index, partial name includes
+    let match =
+      results.find((m) => m.name.toLowerCase() === inputLower) ??
+      results.find((m) => m.index === inputSlug) ??
+      results.find((m) => m.name.toLowerCase().includes(inputLower));
 
     if (!match) {
       return NextResponse.json(

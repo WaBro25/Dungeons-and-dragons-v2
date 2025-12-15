@@ -102,8 +102,7 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Damage</div>
       <div className="space-y-2">
         {rows.map((r, idx) => (
-          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">
-            <div className="flex items-center justify-between gap-4">
+          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">            <div className="flex items-center justify-between gap-4">
               <span className="text-zinc-600 dark:text-zinc-300">{r.name}</span>
               <span className="font-medium">{r.text}</span>
             </div>

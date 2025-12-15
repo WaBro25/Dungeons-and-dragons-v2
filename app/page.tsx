@@ -7,6 +7,9 @@ import MonsterStats from "./components/MonsterStats";
 import MonsterVitals from "./components/MonsterVitals";
 import MonsterDamage from "./components/MonsterDamage";
 
+import MonsterProficiencies from "./components/MonsterProficiencies";
+import MonsterOther from "./components/MonsterOther";
+
 export default function Home() {
   const [monsterName, setMonsterName] = useState("");
   interface ArmorClassEntry {
@@ -48,7 +51,30 @@ export default function Home() {
       }>;
       actions?: Array<{ action_name?: string; count?: string; type?: string }>;
     }>;
-    special_abilities?: Array<{ name?: string; desc?: string }>;
+    special_abilities?: Array<{
+      name?: string;
+      desc?: string;
+      damage?: Array<{
+        damage_type?: { index?: string; name?: string; url?: string };
+        damage_dice?: string;
+      }>;
+    }>;
+    proficiencies?: Array<{ value?: number; proficiency?: { index?: string; name?: string; url?: string } }>;
+    damage_vulnerabilities?: string[];
+    damage_resistances?: string[];
+    damage_immunities?: string[];
+    condition_immunities?: Array<{ index?: string; name?: string; url?: string } | string>;
+    senses?: {
+      blindsight?: string;
+      darkvision?: string;
+      tremorsense?: string;
+      truesight?: string;
+      passive_perception?: number;
+      [k: string]: unknown;
+    };
+    languages?: string;
+    challenge_rating?: number;
+    proficiency_bonus?: number;
   }
 
   const [monsterData, setMonsterData] = useState<MonsterData | null>(null);
@@ -59,7 +85,6 @@ export default function Home() {
 
   console.log(monsterData, 'monsterData')
   useEffect(() => {
-    //shows all monsters on input look up
     const fetchAllMonsters = async () => {
       try {
         const response = await fetch(`/api/monsterManual`);
@@ -166,14 +191,27 @@ export default function Home() {
         <>
           {monsterData?.image ? (
             <div className="my-4 flex items-start gap-4">
-              <MonsterStats
-                strength={monsterData?.strength}
-                dexterity={monsterData?.dexterity}
-                constitution={monsterData?.constitution}
-                intelligence={monsterData?.intelligence}
-                wisdom={monsterData?.wisdom}
-                charisma={monsterData?.charisma}
-              />
+              <div className="flex flex-col gap-3">
+                <MonsterStats
+                  strength={monsterData?.strength}
+                  dexterity={monsterData?.dexterity}
+                  constitution={monsterData?.constitution}
+                  intelligence={monsterData?.intelligence}
+                  wisdom={monsterData?.wisdom}
+                  charisma={monsterData?.charisma}
+                />
+                <MonsterProficiencies proficiencies={monsterData?.proficiencies} />
+                <MonsterOther
+                  damageVulnerabilities={monsterData?.damage_vulnerabilities ?? []}
+                  damageResistances={monsterData?.damage_resistances ?? []}
+                  damageImmunities={monsterData?.damage_immunities ?? []}
+                  conditionImmunities={monsterData?.condition_immunities ?? []}
+                  senses={monsterData?.senses}
+                  languages={monsterData?.languages}
+                  challengeRating={monsterData?.challenge_rating ?? null}
+                  proficiencyBonus={monsterData?.proficiency_bonus ?? null}
+                />
+              </div>
               <div className="relative w-[400px] h-[400px]">
                 <Image
                   src={
