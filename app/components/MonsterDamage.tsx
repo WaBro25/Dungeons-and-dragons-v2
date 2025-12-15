@@ -16,7 +16,6 @@ export interface MonsterAction {
   desc?: string;
   attack_bonus?: number;
   damage?: DamageEntry[];
-  // Multiattack may contain nested actions, which we ignore for damage aggregation
   actions?: Array<{
     action_name?: string;
     count?: string;
@@ -103,10 +102,9 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Damage</div>
       <div className="space-y-2">
         {rows.map((r, idx) => (
-          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">
-            <div className="grid grid-cols-2 gap-3 items-start">
-              <span className="text-zinc-600 dark:text-zinc-300 break-words whitespace-normal">{r.name}</span>
-              <span className="font-medium break-words whitespace-normal">{r.text}</span>
+          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">            <div className="flex items-center justify-between gap-4">
+              <span className="text-zinc-600 dark:text-zinc-300">{r.name}</span>
+              <span className="font-medium">{r.text}</span>
             </div>
           </div>
         ))}

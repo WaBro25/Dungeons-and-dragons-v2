@@ -6,6 +6,7 @@ import MonsterCarousel from "./components/MonsterCarousel";
 import MonsterStats from "./components/MonsterStats";
 import MonsterVitals from "./components/MonsterVitals";
 import MonsterDamage from "./components/MonsterDamage";
+
 import MonsterProficiencies from "./components/MonsterProficiencies";
 import MonsterOther from "./components/MonsterOther";
 
@@ -84,7 +85,6 @@ export default function Home() {
 
   console.log(monsterData, 'monsterData')
   useEffect(() => {
-    //shows all monsters on input look
     const fetchAllMonsters = async () => {
       try {
         const response = await fetch(`/api/monsterManual`);
