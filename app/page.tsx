@@ -1,6 +1,13 @@
 "use client"
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import ArmorClassPanel from "./components/ArmorClassPanel";
+import MonsterCarousel from "./components/MonsterCarousel";
+import MonsterStats from "./components/MonsterStats";
+import MonsterVitals from "./components/MonsterVitals";
+import MonsterDamage from "./components/MonsterDamage";
+import MonsterProficiencies from "./components/MonsterProficiencies";
+import MonsterOther from "./components/MonsterOther";
 
 export default function Home() {
   const [monsterName, setMonsterName] = useState("");
@@ -13,6 +20,60 @@ export default function Home() {
     name?: string;
     image?: string;
     armor_class?: number | ArmorClassEntry[];
+    strength?: number;
+    dexterity?: number;
+    constitution?: number;
+    intelligence?: number;
+    wisdom?: number;
+    charisma?: number;
+    hit_points?: number;
+    hit_dice?: string;
+    hit_points_roll?: string;
+    speed?: { walk?: string; fly?: string; swim?: string; [k: string]: string | undefined };
+    actions?: Array<{
+      name?: string;
+      desc?: string;
+      attack_bonus?: number;
+      damage?: Array<{
+        damage_type?: { index?: string; name?: string; url?: string };
+        damage_dice?: string;
+      }>;
+      actions?: Array<{ action_name?: string; count?: string; type?: string }>;
+    }>;
+    legendary_actions?: Array<{
+      name?: string;
+      desc?: string;
+      attack_bonus?: number;
+      damage?: Array<{
+        damage_type?: { index?: string; name?: string; url?: string };
+        damage_dice?: string;
+      }>;
+      actions?: Array<{ action_name?: string; count?: string; type?: string }>;
+    }>;
+    special_abilities?: Array<{
+      name?: string;
+      desc?: string;
+      damage?: Array<{
+        damage_type?: { index?: string; name?: string; url?: string };
+        damage_dice?: string;
+      }>;
+    }>;
+    proficiencies?: Array<{ value?: number; proficiency?: { index?: string; name?: string; url?: string } }>;
+    damage_vulnerabilities?: string[];
+    damage_resistances?: string[];
+    damage_immunities?: string[];
+    condition_immunities?: Array<{ index?: string; name?: string; url?: string } | string>;
+    senses?: {
+      blindsight?: string;
+      darkvision?: string;
+      tremorsense?: string;
+      truesight?: string;
+      passive_perception?: number;
+      [k: string]: unknown;
+    };
+    languages?: string;
+    challenge_rating?: number;
+    proficiency_bonus?: number;
   }
 
   const [monsterData, setMonsterData] = useState<MonsterData | null>(null);
@@ -21,7 +82,9 @@ export default function Home() {
   const [lastFetchedName, setLastFetchedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  console.log(monsterData, 'monsterData')
   useEffect(() => {
+    //shows all monsters on input look
     const fetchAllMonsters = async () => {
       try {
         const response = await fetch(`/api/monsterManual`);
@@ -71,23 +134,6 @@ export default function Home() {
     }
   };
 
-  const getArmorClassDisplay = (): string | null => {
-    const ac = monsterData?.armor_class;
-    if (ac === undefined || ac === null) return null;
-    if (typeof ac === "number") return String(ac);
-    if (Array.isArray(ac)) {
-      const parts = ac
-        .map((entry) => {
-          if (typeof entry?.value !== "number") return "";
-          const suffix = entry.type ? ` (${entry.type})` : "";
-          return `${entry.value}${suffix}`;
-        })
-        .filter((s) => s.length > 0);
-      return parts.length ? parts.join(", ") : null;
-    }
-    return null;
-  };
-
   // When a new image URL is set, show loading until the image finishes
   useEffect(() => {
     if (monsterData?.image) {
@@ -107,60 +153,97 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <form onSubmit={handleSubmit} className="mb-4">
-        <input
-          type="text"
-          value={monsterName}
-          onChange={(e) => setMonsterName(e.target.value)}
-          placeholder="Enter monster name"
-          list="monster-options"
-          className="border p-2 rounded"
-        />
-        <datalist id="monster-options">
-          {allMonsters.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+      <form onSubmit={handleSubmit} className="mb-4 ml-6 flex items-start gap-2">
+        <div className="flex flex-col">
+          <input
+            type="text"
+            value={monsterName}
+            onChange={(e) => setMonsterName(e.target.value)}
+            placeholder="Enter monster name"
+            list="monster-options"
+            className="border p-2 rounded"
+          />
+          <datalist id="monster-options">
+            {allMonsters.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+          {isLoading ? (
+            <div className="mt-10 m text-sm text-zinc-600 dark:text-zinc-300">Loading monster...</div>
+          ) : null}
+          {error ? (
+            <div className="mt-1 text-sm text-red-600">{error}</div>
+          ) : null}
+        </div>
         <button
           type="submit"
           disabled={isLoading}
           aria-busy={isLoading}
-          className={`ml-2 px-4 py-2 rounded font-medium shadow-sm transition focus-visible:outline-none
+          className={`px-4 py-2 rounded font-medium shadow-sm transition focus-visible:outline-none
                      focus-visible:ring-2 focus-visible:ring-blue-400
                      ${isLoading ? "bg-blue-400 text-white opacity-60 cursor-not-allowed" : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none"}`}
         >
           {isLoading ? "Searching..." : "Search"}
         </button>
       </form>
-      {isLoading ? (
-        <div className="text-sm text-zinc-600 dark:text-zinc-300">Loading monster...</div>
-      ) : null}
-      {error ? (
-        <div className="mt-2 text-sm text-red-600">{error}</div>
-      ) : null}
+      <MonsterCarousel visible={!monsterData && !isLoading} />
       {monsterData && (
         <>
           {monsterData?.image ? (
             <div className="my-4 flex items-start gap-4">
-              <Image
-                src={
-                  monsterData.image.startsWith("http")
-                    ? monsterData.image
-                    : `https://www.dnd5eapi.co${monsterData.image}`
-                }
-                alt={monsterData.name ?? monsterName}
-                width={500}
-                height={500}
-                className="mx-auto max-h-96 object-contain rounded"
-                onLoadingComplete={() => setIsLoading(false)}
-                onError={() => setIsLoading(false)}
-              />
-              {getArmorClassDisplay() ? (
-                <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left">
-                  <div className="text-xs uppercase tracking-wide text-zinc-500">Armor Class</div>
-                  <div className="text-2xl font-semibold">{getArmorClassDisplay()}</div>
-                </div>
-              ) : null}
+              <div className="flex flex-col gap-3">
+                <MonsterStats
+                  strength={monsterData?.strength}
+                  dexterity={monsterData?.dexterity}
+                  constitution={monsterData?.constitution}
+                  intelligence={monsterData?.intelligence}
+                  wisdom={monsterData?.wisdom}
+                  charisma={monsterData?.charisma}
+                />
+                <MonsterProficiencies proficiencies={monsterData?.proficiencies} />
+                <MonsterOther
+                  damageVulnerabilities={monsterData?.damage_vulnerabilities ?? []}
+                  damageResistances={monsterData?.damage_resistances ?? []}
+                  damageImmunities={monsterData?.damage_immunities ?? []}
+                  conditionImmunities={monsterData?.condition_immunities ?? []}
+                  senses={monsterData?.senses}
+                  languages={monsterData?.languages}
+                  challengeRating={monsterData?.challenge_rating ?? null}
+                  proficiencyBonus={monsterData?.proficiency_bonus ?? null}
+                />
+              </div>
+              <div className="relative w-[400px] h-[400px]">
+                <Image
+                  src={
+                    monsterData.image.startsWith("http")
+                      ? monsterData.image
+                      : `https://www.dnd5eapi.co${monsterData.image}`
+                  }
+                  alt={monsterData.name ?? monsterName}
+                  fill
+                  sizes="400px"
+                  className="object-contain rounded"
+                  onLoadingComplete={() => setIsLoading(false)}
+                  onError={() => setIsLoading(false)}
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <ArmorClassPanel armorClass={monsterData?.armor_class} />
+                <MonsterVitals
+                  hitPoints={monsterData?.hit_points}
+                  hitDice={monsterData?.hit_dice}
+                  hitPointsRoll={monsterData?.hit_points_roll}
+                  speed={monsterData?.speed}
+                  onHitPointsChange={(next) =>
+                    setMonsterData((prev) => (prev ? { ...prev, hit_points: next } : prev))
+                  }
+                />
+                <MonsterDamage
+                  actions={monsterData?.actions ?? []}
+                  legendaryActions={monsterData?.legendary_actions ?? []}
+                  specialAbilities={monsterData?.special_abilities ?? []}
+                />
+              </div>
             </div>
           ) : null}
         </>
