@@ -88,6 +88,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
-// app/api/monsterManual/route.ts
-// Removed duplicate GET function implementation
