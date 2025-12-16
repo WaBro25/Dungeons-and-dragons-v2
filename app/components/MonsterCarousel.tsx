@@ -9,14 +9,16 @@ interface CarouselItem {
 interface MonsterCarouselProps {
 	visible: boolean;
 	names?: string[];
+	showNames?: boolean;
 }
 
-export default function MonsterCarousel({ visible, names = ["Adult Brass Dragon", "Adult Red Dragon", "Adult Black Dragon"] }: MonsterCarouselProps) {
+export default function MonsterCarousel({ visible, names = ["Adult Brass Dragon", "Owl Bear", "Giant Goat", "Fire Giant"], showNames = true }: MonsterCarouselProps) {
 	// Use static image URLs for reliability
 	const staticMap: Record<string, string> = {
 		"Adult Brass Dragon": "https://www.dnd5eapi.co/api/images/monsters/adult-brass-dragon.png",
-		"Adult Red Dragon": "https://www.dnd5eapi.co/api/images/monsters/adult-red-dragon.png",
-		"Adult Black Dragon": "https://www.dnd5eapi.co/api/images/monsters/adult-black-dragon.png",
+		"Owl Bear": "https://www.dnd5eapi.co/api/images/monsters/owlbear.png",
+		"Giant Goat": "https://www.dnd5eapi.co/api/images/monsters/giant-goat.png",
+		"Fire Giant": "https://www.dnd5eapi.co/api/images/monsters/fire-giant.png",
 	};
 	const initial: CarouselItem[] = names.map((n) => ({
 		name: n,
@@ -84,7 +86,7 @@ export default function MonsterCarousel({ visible, names = ["Adult Brass Dragon"
 						}}
 					/>
 				</div>
-				<div className="mt-2 text-lg font-medium">{items[index].name}</div>
+				{showNames ? <div className="mt-2 text-lg font-medium">{items[index].name}</div> : null}
 			</div>
 			<button
 				type="button"

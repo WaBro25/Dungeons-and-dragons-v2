@@ -262,7 +262,7 @@ export default function Home() {
           {isLoading ? "Searching..." : "Search"}
         </button>
       </form>
-      <MonsterCarousel visible={!monsterData && !isLoading} />
+      <MonsterCarousel visible={!monsterData && !isLoading} showNames={false} />
       {monsterData && (
         <>
           {monsterData?.image ? (
