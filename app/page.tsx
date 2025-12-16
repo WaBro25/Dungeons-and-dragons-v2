@@ -189,6 +189,44 @@ export default function Home() {
     if (!name) return;
     void loadNote(name);
   }, [monsterData?.name, monsterName, loadNote]);
+
+  const loadHitPoints = useCallback(async (nameOverride?: string) => {
+    try {
+      const targetName = (nameOverride ?? monsterData?.name ?? monsterName).trim();
+      if (!targetName) return;
+      const res = await fetch(`/api/hit-points?monsterName=${encodeURIComponent(targetName)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const persisted = typeof data?.hitPoints?.hitPoints === "number" ? data.hitPoints.hitPoints : null;
+      if (typeof persisted === "number") {
+        setMonsterData((prev) => (prev ? { ...prev, hit_points: persisted } : prev));
+      }
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
+
+  useEffect(() => {
+    const name = (monsterData?.name ?? monsterName).trim();
+    if (!name) return;
+    void loadHitPoints(name);
+  }, [monsterData?.name, monsterName, loadHitPoints]);
+
+  const saveHitPoints = useCallback(async (value: number) => {
+    try {
+      const name = (monsterData?.name ?? monsterName).trim();
+      if (!name) return;
+      await fetch("/api/hit-points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monsterName: name, hitPoints: value }),
+      });
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <form onSubmit={handleSubmit} className="mb-4 ml-6 flex items-start gap-2">
@@ -292,9 +330,10 @@ export default function Home() {
                   hitDice={monsterData?.hit_dice}
                   hitPointsRoll={monsterData?.hit_points_roll}
                   speed={monsterData?.speed}
-                  onHitPointsChange={(next) =>
-                    setMonsterData((prev) => (prev ? { ...prev, hit_points: next } : prev))
-                  }
+                  onHitPointsChange={(next) => {
+                    setMonsterData((prev) => (prev ? { ...prev, hit_points: next } : prev));
+                    void saveHitPoints(next);
+                  }}
                 />
                 <MonsterDamage
                   actions={monsterData?.actions ?? []}
