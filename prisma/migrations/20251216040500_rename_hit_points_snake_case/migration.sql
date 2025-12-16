@@ -29,3 +29,4 @@ CREATE TABLE IF NOT EXISTS public.hit_points (
   hit_points INTEGER NOT NULL
 );
 
+

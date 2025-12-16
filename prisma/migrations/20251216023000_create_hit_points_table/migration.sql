@@ -9,3 +9,4 @@ CREATE TABLE "hit points" (
 -- Unique index to ensure one row per monster
 CREATE UNIQUE INDEX "hit points_monsterName_key" ON "hit points"("monsterName");
 
+
