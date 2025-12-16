@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const monsterId = searchParams.get("monsterName")?.trim();
+    const monsterName = searchParams.get("monsterName")?.trim();
     const notes = await prisma.note.findMany({
-      where: monsterId ? { monsterId } : undefined,
+      where: monsterName ? { monsterName } : undefined,
       orderBy: { id: "desc" },
       select: { id: true, text: true, monsterName: true },
     });
