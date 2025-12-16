@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import ArmorClassPanel from "./components/ArmorClassPanel";
 import MonsterCarousel from "./components/MonsterCarousel";
@@ -105,7 +105,7 @@ export default function Home() {
     fetchAllMonsters();
   }, []);
 
-  const fetchMonsterByName = async () => {
+  const fetchMonsterByName = useCallback(async () => {
     try {
       const nameToFetch = monsterName.trim();
       if (!nameToFetch) return;
@@ -125,7 +125,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [monsterName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,23 +149,22 @@ export default function Home() {
     if (match && lastFetchedName?.toLowerCase() !== match.toLowerCase() && !isLoading) {
       fetchMonsterByName();
     }
-  }, [monsterName, allMonsters, lastFetchedName]);
+  }, [monsterName, allMonsters, lastFetchedName, isLoading, fetchMonsterByName]);
 
-  // Load note on mount
-  useEffect(() => {
-    void loadNote();
-  }, []);
-
-  const loadNote = async () => {
+  const loadNote = useCallback(async (nameOverride?: string) => {
     try {
-      const res = await fetch("/api/notes", { cache: "no-store" });
+      const targetName = (nameOverride ?? monsterData?.name ?? monsterName).trim();
+      if (!targetName) return;
+      const res = await fetch(`/api/notes?monsterName=${encodeURIComponent(targetName)}`, {
+        cache: "no-store",
+      });
       if (!res.ok) return;
       const data = await res.json();
       setNoteInput((data?.note?.text as string) ?? "");
     } catch {
       // ignore
     }
-  };
+  }, [monsterData?.name, monsterName]);
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +174,7 @@ export default function Home() {
       const res = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, monsterName: (monsterData?.name ?? monsterName).trim() }),
       });
       if (!res.ok) return;
       setNoteInput(text);
@@ -183,6 +182,13 @@ export default function Home() {
       // ignore
     }
   };
+
+  // When a monster is successfully fetched, load its note
+  useEffect(() => {
+    const name = (monsterData?.name ?? monsterName).trim();
+    if (!name) return;
+    void loadNote(name);
+  }, [monsterData?.name, monsterName, loadNote]);
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <form onSubmit={handleSubmit} className="mb-4 ml-6 flex items-start gap-2">
