@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import ArmorClassPanel from "./components/ArmorClassPanel";
 import MonsterCarousel from "./components/MonsterCarousel";
@@ -82,8 +82,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetchedName, setLastFetchedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState("");
 
-  console.log(monsterData, 'monsterData')
   useEffect(() => {
     const fetchAllMonsters = async () => {
       try {
@@ -105,7 +105,7 @@ export default function Home() {
     fetchAllMonsters();
   }, []);
 
-  const fetchMonsterByName = async () => {
+  const fetchMonsterByName = useCallback(async () => {
     try {
       const nameToFetch = monsterName.trim();
       if (!nameToFetch) return;
@@ -125,7 +125,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [monsterName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,8 +149,84 @@ export default function Home() {
     if (match && lastFetchedName?.toLowerCase() !== match.toLowerCase() && !isLoading) {
       fetchMonsterByName();
     }
-  }, [monsterName, allMonsters, lastFetchedName]);
+  }, [monsterName, allMonsters, lastFetchedName, isLoading, fetchMonsterByName]);
 
+  const loadNote = useCallback(async (nameOverride?: string) => {
+    try {
+      const targetName = (nameOverride ?? monsterData?.name ?? monsterName).trim();
+      if (!targetName) return;
+      const res = await fetch(`/api/notes?monsterName=${encodeURIComponent(targetName)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setNoteInput((data?.note?.text as string) ?? "");
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = noteInput.trim();
+    if (!text) return;
+    try {
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, monsterName: (monsterData?.name ?? monsterName).trim() }),
+      });
+      if (!res.ok) return;
+      setNoteInput(text);
+    } catch {
+      // ignore
+    }
+  };
+
+  // When a monster is successfully fetched, load its note
+  useEffect(() => {
+    const name = (monsterData?.name ?? monsterName).trim();
+    if (!name) return;
+    void loadNote(name);
+  }, [monsterData?.name, monsterName, loadNote]);
+
+  const loadHitPoints = useCallback(async (nameOverride?: string) => {
+    try {
+      const targetName = (nameOverride ?? monsterData?.name ?? monsterName).trim();
+      if (!targetName) return;
+      const res = await fetch(`/api/hit-points?monsterName=${encodeURIComponent(targetName)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const persisted = typeof data?.hitPoints?.hitPoints === "number" ? data.hitPoints.hitPoints : null;
+      if (typeof persisted === "number") {
+        setMonsterData((prev) => (prev ? { ...prev, hit_points: persisted } : prev));
+      }
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
+
+  useEffect(() => {
+    const name = (monsterData?.name ?? monsterName).trim();
+    if (!name) return;
+    void loadHitPoints(name);
+  }, [monsterData?.name, monsterName, loadHitPoints]);
+
+  const saveHitPoints = useCallback(async (value: number) => {
+    try {
+      const name = (monsterData?.name ?? monsterName).trim();
+      if (!name) return;
+      await fetch("/api/hit-points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monsterName: name, hitPoints: value }),
+      });
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <form onSubmit={handleSubmit} className="mb-4 ml-6 flex items-start gap-2">
@@ -186,7 +262,7 @@ export default function Home() {
           {isLoading ? "Searching..." : "Search"}
         </button>
       </form>
-      <MonsterCarousel visible={!monsterData && !isLoading} />
+      <MonsterCarousel visible={!monsterData && !isLoading} showNames={false} />
       {monsterData && (
         <>
           {monsterData?.image ? (
@@ -212,20 +288,40 @@ export default function Home() {
                   proficiencyBonus={monsterData?.proficiency_bonus ?? null}
                 />
               </div>
-              <div className="relative w-[400px] h-[400px]">
-                <Image
-                  src={
-                    monsterData.image.startsWith("http")
-                      ? monsterData.image
-                      : `https://www.dnd5eapi.co${monsterData.image}`
-                  }
-                  alt={monsterData.name ?? monsterName}
-                  fill
-                  sizes="400px"
-                  className="object-contain rounded"
-                  onLoadingComplete={() => setIsLoading(false)}
-                  onError={() => setIsLoading(false)}
-                />
+              <div className="flex flex-col items-center">
+                <div className="relative w-[400px] h-[400px]">
+                  <Image
+                    src={
+                      monsterData.image.startsWith("http")
+                        ? monsterData.image
+                        : `https://www.dnd5eapi.co${monsterData.image}`
+                    }
+                    alt={monsterData.name ?? monsterName}
+                    fill
+                    sizes="400px"
+                    className="object-contain rounded"
+                    onLoadingComplete={() => setIsLoading(false)}
+                    onError={() => setIsLoading(false)}
+                  />
+                </div>
+                <div className="mt-2 w-[400px] px-2">
+                  <div className="text-sm font-semibold mb-1">Notes</div>
+                  <form onSubmit={handleAddNote} className="flex items-start gap-2">
+                    <textarea
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="Write a note..."
+                      className="flex-1 min-h-16 p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none cursor-pointer transition disabled:opacity-60"
+                      disabled={!noteInput.trim()}
+                    >
+                      Save
+                    </button>
+                  </form>
+                </div>
               </div>
               <div className="flex flex-col gap-3">
                 <ArmorClassPanel armorClass={monsterData?.armor_class} />
@@ -234,9 +330,10 @@ export default function Home() {
                   hitDice={monsterData?.hit_dice}
                   hitPointsRoll={monsterData?.hit_points_roll}
                   speed={monsterData?.speed}
-                  onHitPointsChange={(next) =>
-                    setMonsterData((prev) => (prev ? { ...prev, hit_points: next } : prev))
-                  }
+                  onHitPointsChange={(next) => {
+                    setMonsterData((prev) => (prev ? { ...prev, hit_points: next } : prev));
+                    void saveHitPoints(next);
+                  }}
                 />
                 <MonsterDamage
                   actions={monsterData?.actions ?? []}

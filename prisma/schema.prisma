@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Note {
+  id        Int     @id @default(autoincrement())
+  text      String?
+  monsterName String? @unique
+}
+
+model HitPoints {
+  id           Int    @id @default(autoincrement())
+  monsterName  String @unique
+  hitPoints    Int    @map("hit_points")
+
+  @@map("hit_points")
+}
