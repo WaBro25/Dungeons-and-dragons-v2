@@ -20,7 +20,6 @@ export default function Home() {
   interface MonsterData {
     name?: string;
     image?: string;
-    index?: string;
     armor_class?: number | ArmorClassEntry[];
     strength?: number;
     dexterity?: number;
@@ -81,16 +80,9 @@ export default function Home() {
   const [monsterData, setMonsterData] = useState<MonsterData | null>(null);
   const [allMonsters, setAllMonsters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastFetchedName, setLastFetchedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noteInput, setNoteInput] = useState("");
-
-  const getMonsterId = (): string | null => {
-    const idx = monsterData?.index?.trim();
-    if (idx) return idx;
-    const name = monsterData?.name?.trim();
-    if (!name) return null;
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  };
 
   useEffect(() => {
     const fetchAllMonsters = async () => {
@@ -125,7 +117,8 @@ export default function Home() {
       }
       const data = await response.json();
       setMonsterData(data as MonsterData);
-      // loaded
+      setLastFetchedName(nameToFetch);
+      console.log(data);
     } catch (error) {
       console.error("Failed to fetch monster data:", error);
       setError("Failed to fetch monster. Please try again.");
@@ -141,18 +134,31 @@ export default function Home() {
     }
   };
 
-  // removed auto-fetch and image-loading hooks for simplicity
+  // When a new image URL is set, show loading until the image finishes
+  useEffect(() => {
+    if (monsterData?.image) {
+      setIsLoading(true);
+    }
+  }, [monsterData?.image]);
 
-  // Load note when monster changes
+  // Auto-fetch when the user has entered a full, exact monster name
+  useEffect(() => {
+    const name = monsterName.trim();
+    if (!name) return;
+    const match = allMonsters.find((m) => m.toLowerCase() === name.toLowerCase());
+    if (match && lastFetchedName?.toLowerCase() !== match.toLowerCase() && !isLoading) {
+      fetchMonsterByName();
+    }
+  }, [monsterName, allMonsters, lastFetchedName]);
+
+  // Load note on mount
   useEffect(() => {
     void loadNote();
-  }, [monsterData?.index]);
+  }, []);
 
   const loadNote = async () => {
     try {
-      const monsterId = getMonsterId();
-      if (!monsterId) return;
-      const res = await fetch(`/api/notes?monsterId=${encodeURIComponent(monsterId)}`, { cache: "no-store" });
+      const res = await fetch("/api/notes", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       setNoteInput((data?.note?.text as string) ?? "");
@@ -166,12 +172,10 @@ export default function Home() {
     const text = noteInput.trim();
     if (!text) return;
     try {
-      const monsterId = getMonsterId();
-      if (!monsterId) return;
       const res = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, monsterId }),
+        body: JSON.stringify({ text }),
       });
       if (!res.ok) return;
       setNoteInput(text);
@@ -252,6 +256,8 @@ export default function Home() {
                     fill
                     sizes="400px"
                     className="object-contain rounded"
+                    onLoadingComplete={() => setIsLoading(false)}
+                    onError={() => setIsLoading(false)}
                   />
                 </div>
                 <div className="mt-2 w-[400px] px-2">
