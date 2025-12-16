@@ -20,6 +20,7 @@ export default function Home() {
   interface MonsterData {
     name?: string;
     image?: string;
+    index?: string;
     armor_class?: number | ArmorClassEntry[];
     strength?: number;
     dexterity?: number;
@@ -80,10 +81,17 @@ export default function Home() {
   const [monsterData, setMonsterData] = useState<MonsterData | null>(null);
   const [allMonsters, setAllMonsters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastFetchedName, setLastFetchedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState("");
 
-  console.log(monsterData, 'monsterData')
+  const getMonsterId = (): string | null => {
+    const idx = monsterData?.index?.trim();
+    if (idx) return idx;
+    const name = monsterData?.name?.trim();
+    if (!name) return null;
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  };
+
   useEffect(() => {
     const fetchAllMonsters = async () => {
       try {
@@ -117,8 +125,7 @@ export default function Home() {
       }
       const data = await response.json();
       setMonsterData(data as MonsterData);
-      setLastFetchedName(nameToFetch);
-      console.log(data);
+      // loaded
     } catch (error) {
       console.error("Failed to fetch monster data:", error);
       setError("Failed to fetch monster. Please try again.");
@@ -134,23 +141,44 @@ export default function Home() {
     }
   };
 
-  // When a new image URL is set, show loading until the image finishes
-  useEffect(() => {
-    if (monsterData?.image) {
-      setIsLoading(true);
-    }
-  }, [monsterData?.image]);
+  // removed auto-fetch and image-loading hooks for simplicity
 
-  // Auto-fetch when the user has entered a full, exact monster name
+  // Load note when monster changes
   useEffect(() => {
-    const name = monsterName.trim();
-    if (!name) return;
-    const match = allMonsters.find((m) => m.toLowerCase() === name.toLowerCase());
-    if (match && lastFetchedName?.toLowerCase() !== match.toLowerCase() && !isLoading) {
-      fetchMonsterByName();
-    }
-  }, [monsterName, allMonsters, lastFetchedName]);
+    void loadNote();
+  }, [monsterData?.index]);
 
+  const loadNote = async () => {
+    try {
+      const monsterId = getMonsterId();
+      if (!monsterId) return;
+      const res = await fetch(`/api/notes?monsterId=${encodeURIComponent(monsterId)}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setNoteInput((data?.note?.text as string) ?? "");
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = noteInput.trim();
+    if (!text) return;
+    try {
+      const monsterId = getMonsterId();
+      if (!monsterId) return;
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, monsterId }),
+      });
+      if (!res.ok) return;
+      setNoteInput(text);
+    } catch {
+      // ignore
+    }
+  };
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <form onSubmit={handleSubmit} className="mb-4 ml-6 flex items-start gap-2">
@@ -212,20 +240,38 @@ export default function Home() {
                   proficiencyBonus={monsterData?.proficiency_bonus ?? null}
                 />
               </div>
-              <div className="relative w-[400px] h-[400px]">
-                <Image
-                  src={
-                    monsterData.image.startsWith("http")
-                      ? monsterData.image
-                      : `https://www.dnd5eapi.co${monsterData.image}`
-                  }
-                  alt={monsterData.name ?? monsterName}
-                  fill
-                  sizes="400px"
-                  className="object-contain rounded"
-                  onLoadingComplete={() => setIsLoading(false)}
-                  onError={() => setIsLoading(false)}
-                />
+              <div className="flex flex-col items-center">
+                <div className="relative w-[400px] h-[400px]">
+                  <Image
+                    src={
+                      monsterData.image.startsWith("http")
+                        ? monsterData.image
+                        : `https://www.dnd5eapi.co${monsterData.image}`
+                    }
+                    alt={monsterData.name ?? monsterName}
+                    fill
+                    sizes="400px"
+                    className="object-contain rounded"
+                  />
+                </div>
+                <div className="mt-2 w-[400px] px-2">
+                  <div className="text-sm font-semibold mb-1">Notes</div>
+                  <form onSubmit={handleAddNote} className="flex items-start gap-2">
+                    <textarea
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="Write a note..."
+                      className="flex-1 min-h-16 p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none cursor-pointer transition disabled:opacity-60"
+                      disabled={!noteInput.trim()}
+                    >
+                      Save
+                    </button>
+                  </form>
+                </div>
               </div>
               <div className="flex flex-col gap-3">
                 <ArmorClassPanel armorClass={monsterData?.armor_class} />

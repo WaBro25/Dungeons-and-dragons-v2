@@ -16,4 +16,5 @@ datasource db {
 model Note {
   id    Int     @id @default(autoincrement())
   text  String?
+  monsterId String? @unique
 }

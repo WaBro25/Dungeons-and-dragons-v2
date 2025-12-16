@@ -19,6 +19,15 @@ const noteData: Prisma.NoteCreateInput[] = [
   }
 ];
 
+// const monsterIdData: Prisma.monsteIdCreateInput[] = [
+//     {
+//       text: "test",
+//     },
+//     {
+//       text: "another test",
+//     }
+//   ];
+
 export async function main() {
   for (const note of noteData) {
     await prisma.note.create({ data: note });
