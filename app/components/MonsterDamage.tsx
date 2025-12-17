@@ -1,4 +1,5 @@
-import React from "react";
+"use client";
+import React, { useEffect, useMemo, useState } from "react";
 
 interface DamageTypeRef {
   index?: string;
@@ -49,77 +50,142 @@ function formatDamageList(damage?: DamageEntry[]): string | null {
 }
 
 export default function MonsterDamage({ actions, legendaryActions, specialAbilities }: MonsterDamageProps) {
-  const actionEntries = Array.isArray(actions) ? actions : [];
-  const legendaryEntries = Array.isArray(legendaryActions) ? legendaryActions : [];
-  const specials = Array.isArray(specialAbilities) ? specialAbilities : [];
+  const actionEntries = useMemo(() => (Array.isArray(actions) ? actions : []), [actions]);
+  const legendaryEntries = useMemo(() => (Array.isArray(legendaryActions) ? legendaryActions : []), [legendaryActions]);
+  const specials = useMemo(() => (Array.isArray(specialAbilities) ? specialAbilities : []), [specialAbilities]);
 
-  const rows: Array<{ label: string; name: string; text: string }> = [];
-
-  // Include Legendary Resistance if present among special abilities
-  const legendaryResistance = specials.find(
-    (s) => (s.name ?? "").toLowerCase().includes("legendary resistance")
+  // Extract Legendary Resistances from specials
+  const legendaryResistances = useMemo(
+    () => specials.filter((s) => (s.name ?? "").toLowerCase().includes("legendary resistance")),
+    [specials]
   );
-  if (legendaryResistance) {
-    rows.push({
-      label: "Legendary",
-      name: legendaryResistance.name ?? "Legendary Resistance",
-      text: legendaryResistance.desc ?? "",
-    });
-  }
 
-  // Include all other special abilities
-  for (const s of specials) {
-    if ((s.name ?? "").toLowerCase().includes("legendary resistance")) continue;
-    const name = s.name ?? "Special Ability";
-    const formatted = formatDamageList(s.damage);
-    rows.push({
-      label: "Special",
-      name,
-      text: formatted ?? (s.desc ?? ""),
-    });
-  }
+  const shouldMoveToLegendary = (name?: string) => {
+    const n = (name ?? "").toLowerCase();
+    return n.includes("frightful presence") || n.includes("breath weapon");
+  };
+  const isAttackAction = (a: MonsterAction) => {
+    const hasAttackBonus = typeof a.attack_bonus === "number";
+    const hasDamage = Array.isArray(a.damage) && a.damage.length > 0;
+    const descLower = (a.desc ?? "").toLowerCase();
+    const looksLikeAttack =
+      descLower.includes("attack") ||
+      (Array.isArray(a.actions) &&
+        a.actions.some((sub) => (sub.action_name ?? "").toLowerCase().includes("attack")));
+    return hasAttackBonus || hasDamage || looksLikeAttack;
+  };
 
-  for (const a of actionEntries) {
-    const name = a.name ?? "Action";
-    const formatted = formatDamageList(a.damage);
-    let text: string | null = formatted ?? null;
-    if (!text) {
-      if (a.desc && a.desc.trim().length > 0) {
-        text = a.desc.trim();
-      } else if (Array.isArray(a.actions) && a.actions.length > 0) {
-        const parts = a.actions
-          .map((sub) => {
-            const n = sub.action_name ?? "Action";
-            const t = sub.type ? ` ${sub.type}` : "";
-            const c = sub.count ? ` ×${sub.count}` : "";
-            return `${n}${t}${c}`;
-          })
-          .filter((s) => s.length > 0);
-        text = parts.join(", ");
-      }
+  // Prepare row renderers
+  const actionRows = useMemo(() => {
+    return actionEntries
+      .filter((a) => !shouldMoveToLegendary(a.name) && isAttackAction(a))
+      .map((a) => {
+        const name = a.name ?? "Action";
+        const formatted = formatDamageList(a.damage);
+        const text = formatted ?? (a.desc?.trim() ?? "");
+        if (!text) return null;
+        return { name, text };
+      })
+      .filter(Boolean) as Array<{ name: string; text: string }>;
+  }, [actionEntries]);
+
+  const legendaryActionRows = useMemo(() => {
+    return legendaryEntries.map((la) => {
+      const name = la.name ?? "Legendary Action";
+      const formatted = formatDamageList(la.damage);
+      return { name, text: formatted ?? (la.desc ?? "") };
+    });
+  }, [legendaryEntries]);
+
+  const legendaryResistanceRows = useMemo(() => {
+    return legendaryResistances.map((lr) => ({
+      name: lr.name ?? "Legendary Resistance",
+      text: lr.desc ?? "",
+    }));
+  }, [legendaryResistances]);
+
+  // Pull selected actions (Frightful Presence, Breath Weapon) into Legendary bucket
+  const legendaryFromActionsRows = useMemo(() => {
+    return actionEntries
+      .filter((a) => shouldMoveToLegendary(a.name))
+      .map((a) => {
+        const name = a.name ?? "Legendary";
+        const formatted = formatDamageList(a.damage);
+        const text = formatted ?? (a.desc?.trim() ?? "");
+        return { name, text };
+      });
+  }, [actionEntries]);
+
+  // Merge Legendary Resistances into the Legendary bucket (no separate tab)
+  const mergedLegendaryRows = useMemo(
+    () => [...legendaryResistanceRows, ...legendaryActionRows, ...legendaryFromActionsRows],
+    [legendaryResistanceRows, legendaryActionRows, legendaryFromActionsRows]
+  );
+
+  const hasAny = actionRows.length > 0 || mergedLegendaryRows.length > 0;
+  if (!hasAny) return null;
+
+  type TabKey = "actions" | "legendaryActions";
+  const hasOnlyActions = actionRows.length > 0 && mergedLegendaryRows.length === 0;
+  const defaultTab: TabKey =
+    actionRows.length > 0
+      ? "actions"
+      : mergedLegendaryRows.length > 0
+      ? "legendaryActions"
+      : "actions";
+  const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+
+  const tabs: Array<{ key: TabKey; label: string; count: number }> = [
+    { key: "actions", label: "Actions", count: actionRows.length },
+    { key: "legendaryActions", label: "Legendary", count: mergedLegendaryRows.length },
+  ].filter((t) => t.count > 0);
+
+  useEffect(() => {
+    // Ensure active tab is valid when data changes
+    if (hasOnlyActions && activeTab !== "actions") {
+      setActiveTab("actions");
+      return;
     }
-    if (text) {
-      rows.push({ label: "Action", name, text });
+    if (!hasOnlyActions && tabs.length > 0 && !tabs.some((t) => t.key === activeTab)) {
+      setActiveTab(tabs[0].key);
     }
-  }
-  for (const la of legendaryEntries) {
-    const name = la.name ?? "Legendary Action";
-    const formatted = formatDamageList(la.damage);
-    rows.push({
-      label: "Legendary",
-      name,
-      text: formatted ?? (la.desc ?? ""),
-    });
-  }
+  }, [hasOnlyActions, tabs, activeTab]);
 
-  if (rows.length === 0) return null;
+  const currentRows = hasOnlyActions
+    ? actionRows
+    : activeTab === "actions"
+    ? actionRows
+    : mergedLegendaryRows;
 
   return (
     <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left">
-      <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Damage</div>
+      {hasOnlyActions ? (
+        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Actions</div>
+      ) : (
+        <div className="mb-2 flex gap-2">
+          {tabs.map((t) => {
+            const isActive = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                  isActive
+                    ? "border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800"
+                    : "border-transparent hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60"
+                }`}
+              >
+                {t.label}
+                <span className="ml-1 text-[10px] text-zinc-500">({t.count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="space-y-2">
-        {rows.map((r, idx) => (
-          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">
+        {currentRows.map((r, idx) => (
+          <div key={`${r.name}-${idx}`} className="text-sm">
             <div className="grid grid-cols-2 gap-3 items-start">
               <span className="text-zinc-600 dark:text-zinc-300">{r.name}</span>
               <span className="font-medium break-words whitespace-normal max-w-[240px]">{r.text}</span>

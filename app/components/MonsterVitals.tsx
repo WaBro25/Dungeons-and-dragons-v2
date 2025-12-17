@@ -40,6 +40,9 @@ export default function MonsterVitals({
           <span className="text-sm text-zinc-600 dark:text-zinc-300">Hit Points</span>
           {typeof onHitPointsChange === "function" ? (
             <div className="flex items-center gap-2">
+              {typeof startingHitPoints === "number" ? (
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">{startingHitPoints}/</span>
+              ) : null}
               <input
                 type="number"
                 className="w-24 px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-right"
@@ -56,9 +59,6 @@ export default function MonsterVitals({
                 min={0}
                 inputMode="numeric"
               />
-              {typeof startingHitPoints === "number" ? (
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">(start: {startingHitPoints})</span>
-              ) : null}
             </div>
           ) : (
             <span className="text-base font-semibold">
