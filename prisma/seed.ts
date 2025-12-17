@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "../app/generated/prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import "dotenv/config";
@@ -13,11 +13,9 @@ const pool = new Pool({
 });
 const adapter = new PrismaPg(pool);
 
-const prisma = new PrismaClient({
-  adapter,
-});
+const prisma = new PrismaClient({ adapter });
 
-const noteData: Prisma.NoteCreateInput[] = [
+const noteData: Array<{ text?: string | null; monsterName?: string | null }> = [
   {
     text: "test",
   },
@@ -37,7 +35,7 @@ const noteData: Prisma.NoteCreateInput[] = [
 
 export async function main() {
   for (const note of noteData) {
-    await prisma.note.create({ data: note });
+    await (prisma as any).note.create({ data: note });
   }
 }
 
