@@ -83,6 +83,9 @@ export default function Home() {
   const [lastFetchedName, setLastFetchedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noteInput, setNoteInput] = useState("");
+  const [activeTab, setActiveTab] = useState<"notes" | "logs">("notes");
+  const [logInput, setLogInput] = useState("");
+  const [logs, setLogs] = useState<Array<{ id: number; text: string | null; monsterName: string; createdAt: string }>>([]);
 
   useEffect(() => {
     const fetchAllMonsters = async () => {
@@ -183,12 +186,50 @@ export default function Home() {
     }
   };
 
+  const loadLogs = useCallback(async (nameOverride?: string) => {
+    try {
+      const targetName = (nameOverride ?? monsterData?.name ?? monsterName).trim();
+      if (!targetName) return;
+      const res = await fetch(`/api/logs?monsterName=${encodeURIComponent(targetName)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data?.logs) ? data.logs : [];
+      setLogs(list);
+    } catch {
+      // ignore
+    }
+  }, [monsterData?.name, monsterName]);
+
+  const handleAddLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = logInput.trim();
+    if (!text) return;
+    try {
+      const res = await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, monsterName: (monsterData?.name ?? monsterName).trim() }),
+      });
+      if (!res.ok) return;
+      setLogInput("");
+      const currentName = (monsterData?.name ?? monsterName).trim();
+      if (currentName) {
+        void loadLogs(currentName);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   // When a monster is successfully fetched, load its note
   useEffect(() => {
     const name = (monsterData?.name ?? monsterName).trim();
     if (!name) return;
     void loadNote(name);
-  }, [monsterData?.name, monsterName, loadNote]);
+    void loadLogs(name);
+  }, [monsterData?.name, monsterName, loadNote, loadLogs]);
 
   const loadHitPoints = useCallback(async (nameOverride?: string) => {
     try {
@@ -305,22 +346,83 @@ export default function Home() {
                   />
                 </div>
                 <div className="mt-2 w-[400px] px-2">
-                  <div className="text-sm font-semibold mb-1">Notes</div>
-                  <form onSubmit={handleAddNote} className="flex items-start gap-2">
-                    <textarea
-                      value={noteInput}
-                      onChange={(e) => setNoteInput(e.target.value)}
-                      placeholder="Write a note..."
-                      className="flex-1 min-h-16 p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-sm"
-                    />
+                  <div className="mb-2 flex items-center gap-2">
                     <button
-                      type="submit"
-                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none cursor-pointer transition disabled:opacity-60"
-                      disabled={!noteInput.trim()}
+                      type="button"
+                      onClick={() => setActiveTab("notes")}
+                      className={`px-2 py-1 rounded text-sm border ${
+                        activeTab === "notes"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-transparent text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700"
+                      }`}
                     >
-                      Save
+                      Notes
                     </button>
-                  </form>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("logs")}
+                      className={`px-2 py-1 rounded text-sm border ${
+                        activeTab === "logs"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-transparent text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700"
+                      }`}
+                    >
+                      Logs
+                    </button>
+                  </div>
+                  {activeTab === "notes" ? (
+                    <form onSubmit={handleAddNote} className="flex items-start gap-2">
+                      <textarea
+                        value={noteInput}
+                        onChange={(e) => setNoteInput(e.target.value)}
+                        placeholder="Write a note..."
+                        className="flex-1 min-h-16 p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-sm"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none cursor-pointer transition disabled:opacity-60"
+                        disabled={!noteInput.trim()}
+                      >
+                        Save
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <form onSubmit={handleAddLog} className="flex items-start gap-2">
+                        <textarea
+                          value={logInput}
+                          onChange={(e) => setLogInput(e.target.value)}
+                          placeholder="Write a log entry..."
+                          className="flex-1 min-h-16 p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-sm"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-none cursor-pointer transition disabled:opacity-60"
+                          disabled={!logInput.trim()}
+                        >
+                          Add
+                        </button>
+                      </form>
+                      {logs.length > 0 ? (
+                        <div className="mt-2 max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-800 rounded">
+                          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                            {logs.map((l) => (
+                              <li key={l.id} className="p-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-zinc-600 dark:text-zinc-300 break-words">{l.text ?? ""}</span>
+                                  <span className="text-xs text-zinc-500 ml-2">
+                                    {new Date(l.createdAt).toLocaleString()}
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-zinc-500">No logs yet.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-3">
