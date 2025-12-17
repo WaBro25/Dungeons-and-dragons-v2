@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 interface DamageTypeRef {
   index?: string;
@@ -122,9 +122,6 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
     [legendaryResistanceRows, legendaryActionRows, legendaryFromActionsRows]
   );
 
-  const hasAny = actionRows.length > 0 || mergedLegendaryRows.length > 0;
-  if (!hasAny) return null;
-
   type TabKey = "actions" | "legendaryActions";
   const hasOnlyActions = actionRows.length > 0 && mergedLegendaryRows.length === 0;
   const defaultTab: TabKey =
@@ -133,29 +130,27 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
       : mergedLegendaryRows.length > 0
       ? "legendaryActions"
       : "actions";
-  const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+  const [selectedTab, setSelectedTab] = useState<TabKey>(defaultTab);
 
   const tabs: Array<{ key: TabKey; label: string; count: number }> = [
-    { key: "actions", label: "Actions", count: actionRows.length },
-    { key: "legendaryActions", label: "Legendary", count: mergedLegendaryRows.length },
+    { key: "actions" as TabKey, label: "Actions", count: actionRows.length },
+    { key: "legendaryActions" as TabKey, label: "Legendary", count: mergedLegendaryRows.length },
   ].filter((t) => t.count > 0);
 
-  useEffect(() => {
-    // Ensure active tab is valid when data changes
-    if (hasOnlyActions && activeTab !== "actions") {
-      setActiveTab("actions");
-      return;
-    }
-    if (!hasOnlyActions && tabs.length > 0 && !tabs.some((t) => t.key === activeTab)) {
-      setActiveTab(tabs[0].key);
-    }
-  }, [hasOnlyActions, tabs, activeTab]);
+  const effectiveActiveTab: TabKey = useMemo(() => {
+    if (hasOnlyActions) return "actions";
+    if (tabs.length === 0) return "actions";
+    return tabs.some((t) => t.key === selectedTab) ? selectedTab : tabs[0].key;
+  }, [hasOnlyActions, tabs, selectedTab]);
 
   const currentRows = hasOnlyActions
     ? actionRows
-    : activeTab === "actions"
+    : effectiveActiveTab === "actions"
     ? actionRows
     : mergedLegendaryRows;
+
+  const hasAny = actionRows.length > 0 || mergedLegendaryRows.length > 0;
+  if (!hasAny) return null;
 
   return (
     <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left">
@@ -164,12 +159,12 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
       ) : (
         <div className="mb-2 flex gap-2">
           {tabs.map((t) => {
-            const isActive = activeTab === t.key;
+            const isActive = effectiveActiveTab === t.key;
             return (
               <button
                 key={t.key}
                 type="button"
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => setSelectedTab(t.key)}
                 className={`text-xs px-2 py-1 rounded border transition-colors ${
                   isActive
                     ? "border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800"
