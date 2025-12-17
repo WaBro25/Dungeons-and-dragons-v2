@@ -21,6 +21,7 @@ export default function Home() {
     name?: string;
     image?: string;
     armor_class?: number | ArmorClassEntry[];
+    starting_hit_points?: number;
     strength?: number;
     dexterity?: number;
     constitution?: number;
@@ -39,6 +40,7 @@ export default function Home() {
         damage_type?: { index?: string; name?: string; url?: string };
         damage_dice?: string;
       }>;
+      multiattack_type?: string;
       actions?: Array<{ action_name?: string; count?: string; type?: string }>;
     }>;
     legendary_actions?: Array<{
@@ -119,7 +121,7 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setMonsterData(data as MonsterData);
+      setMonsterData({ ...(data as MonsterData), starting_hit_points: (data?.hit_points as number | undefined) });
       setLastFetchedName(nameToFetch);
       console.log(data);
     } catch (error) {
@@ -327,6 +329,7 @@ export default function Home() {
                   languages={monsterData?.languages}
                   challengeRating={monsterData?.challenge_rating ?? null}
                   proficiencyBonus={monsterData?.proficiency_bonus ?? null}
+                  specialAbilities={monsterData?.special_abilities ?? []}
                 />
               </div>
               <div className="flex flex-col items-center">
@@ -429,6 +432,7 @@ export default function Home() {
                 <ArmorClassPanel armorClass={monsterData?.armor_class} />
                 <MonsterVitals
                   hitPoints={monsterData?.hit_points}
+                  startingHitPoints={monsterData?.starting_hit_points}
                   hitDice={monsterData?.hit_dice}
                   hitPointsRoll={monsterData?.hit_points_roll}
                   speed={monsterData?.speed}

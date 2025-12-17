@@ -16,6 +16,7 @@ export interface MonsterAction {
   desc?: string;
   attack_bonus?: number;
   damage?: DamageEntry[];
+  multiattack_type?: string;
   actions?: Array<{
     action_name?: string;
     count?: string;
@@ -81,8 +82,24 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
   for (const a of actionEntries) {
     const name = a.name ?? "Action";
     const formatted = formatDamageList(a.damage);
-    if (formatted) {
-      rows.push({ label: "Action", name, text: formatted });
+    let text: string | null = formatted ?? null;
+    if (!text) {
+      if (a.desc && a.desc.trim().length > 0) {
+        text = a.desc.trim();
+      } else if (Array.isArray(a.actions) && a.actions.length > 0) {
+        const parts = a.actions
+          .map((sub) => {
+            const n = sub.action_name ?? "Action";
+            const t = sub.type ? ` ${sub.type}` : "";
+            const c = sub.count ? ` ×${sub.count}` : "";
+            return `${n}${t}${c}`;
+          })
+          .filter((s) => s.length > 0);
+        text = parts.join(", ");
+      }
+    }
+    if (text) {
+      rows.push({ label: "Action", name, text });
     }
   }
   for (const la of legendaryEntries) {
@@ -102,9 +119,10 @@ export default function MonsterDamage({ actions, legendaryActions, specialAbilit
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Damage</div>
       <div className="space-y-2">
         {rows.map((r, idx) => (
-          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">            <div className="flex items-center justify-between gap-4">
+          <div key={`${r.label}-${r.name}-${idx}`} className="text-sm">
+            <div className="grid grid-cols-2 gap-3 items-start">
               <span className="text-zinc-600 dark:text-zinc-300">{r.name}</span>
-              <span className="font-medium">{r.text}</span>
+              <span className="font-medium break-words whitespace-normal max-w-[240px]">{r.text}</span>
             </div>
           </div>
         ))}
