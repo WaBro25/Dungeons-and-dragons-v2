@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 const DND5E_API_BASE = "https://www.dnd5eapi.co/api/2014";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
