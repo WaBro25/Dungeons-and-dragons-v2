@@ -9,6 +9,7 @@ interface Speed {
 
 interface MonsterVitalsProps {
   hitPoints?: number | null;
+  startingHitPoints?: number | null;
   hitDice?: string | null;
   hitPointsRoll?: string | null;
   speed?: Speed | null;
@@ -17,6 +18,7 @@ interface MonsterVitalsProps {
 
 export default function MonsterVitals({
   hitPoints,
+  startingHitPoints,
   hitDice,
   hitPointsRoll,
   speed,
@@ -37,24 +39,34 @@ export default function MonsterVitals({
         <div className="flex items-center justify-between">
           <span className="text-sm text-zinc-600 dark:text-zinc-300">Hit Points</span>
           {typeof onHitPointsChange === "function" ? (
-            <input
-              type="number"
-              className="w-24 px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-right"
-              value={typeof hitPoints === "number" ? hitPoints : ""}
-              onChange={(e) => {
-                const next = parseInt(e.target.value, 10);
-                if (Number.isFinite(next)) {
-                  onHitPointsChange(next);
-                } else if (e.target.value === "") {
-                  // Allow clearing temporarily to empty string without emitting NaN
-                  onHitPointsChange(0);
-                }
-              }}
-              min={0}
-              inputMode="numeric"
-            />
+            <div className="flex items-center gap-2">
+              {typeof startingHitPoints === "number" ? (
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">{startingHitPoints}/</span>
+              ) : null}
+              <input
+                type="number"
+                className="w-24 px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-right"
+                value={typeof hitPoints === "number" ? hitPoints : ""}
+                onChange={(e) => {
+                  const next = parseInt(e.target.value, 10);
+                  if (Number.isFinite(next)) {
+                    onHitPointsChange(next);
+                  } else if (e.target.value === "") {
+                    // Allow clearing temporarily to empty string without emitting NaN
+                    onHitPointsChange(0);
+                  }
+                }}
+                min={0}
+                inputMode="numeric"
+              />
+            </div>
           ) : (
-            <span className="text-base font-semibold">{typeof hitPoints === "number" ? hitPoints : "-"}</span>
+            <span className="text-base font-semibold">
+              {typeof hitPoints === "number" ? hitPoints : "-"}
+              {typeof startingHitPoints === "number" ? (
+                <span className="ml-2 text-xs font-normal text-zinc-500 dark:text-zinc-400">(start: {startingHitPoints})</span>
+              ) : null}
+            </span>
           )}
         </div>
         {hitDice ? (

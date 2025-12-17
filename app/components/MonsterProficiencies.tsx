@@ -20,7 +20,7 @@ export default function MonsterProficiencies({ proficiencies }: MonsterProficien
   if (items.length === 0) return null;
 
   return (
-    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left min-w-[220px]">
+    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left w-[240px]">
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Proficiencies</div>
       <div className="space-y-1">
         {items.map((entry, idx) => {

@@ -32,7 +32,7 @@ export default function MonsterStats({
   if (!hasAny) return null;
 
   return (
-    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left min-w-[180px]">
+    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left w-[240px]">
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Stats</div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {entries.map(({ label, value }) => (

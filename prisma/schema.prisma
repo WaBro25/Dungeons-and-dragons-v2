@@ -20,3 +20,12 @@ model HitPoints {
 
   @@map("hit_points")
 }
+
+model Log {
+  id          Int       @id @default(autoincrement())
+  text        String?
+  monsterName String
+  createdAt   DateTime  @default(now())
+
+  @@index([monsterName, createdAt])
+}

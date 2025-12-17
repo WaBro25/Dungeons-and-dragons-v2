@@ -10,7 +10,10 @@ export default defineConfig({
     seed: `tsx prisma/seed.ts`,
 
   },
+  // Programmatic datasource URL for Prisma CLI (Migrate).
+  // Prefer DIRECT_URL (non-pooled 5432) to avoid PgBouncer DDL issues,
+  // fall back to DATABASE_URL if DIRECT_URL is not set.
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DIRECT_URL ?? env("DATABASE_URL"),
   },
 });

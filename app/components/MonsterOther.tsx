@@ -17,6 +17,23 @@ interface Senses {
   [k: string]: unknown;
 }
 
+interface DamageTypeRef {
+  index?: string;
+  name?: string;
+  url?: string;
+}
+
+interface DamageEntry {
+  damage_type?: DamageTypeRef;
+  damage_dice?: string;
+}
+
+interface SpecialAbility {
+  name?: string;
+  desc?: string;
+  damage?: DamageEntry[];
+}
+
 interface MonsterOtherProps {
   damageVulnerabilities?: MaybeString[] | null;
   damageResistances?: MaybeString[] | null;
@@ -26,6 +43,7 @@ interface MonsterOtherProps {
   languages?: MaybeString;
   challengeRating?: number | null;
   proficiencyBonus?: number | null;
+  specialAbilities?: SpecialAbility[] | null;
 }
 
 function joinList(values?: MaybeString[] | null): string | null {
@@ -51,11 +69,13 @@ export default function MonsterOther({
   languages,
   challengeRating,
   proficiencyBonus,
+  specialAbilities,
 }: MonsterOtherProps) {
   const vul = joinList(damageVulnerabilities);
   const res = joinList(damageResistances);
   const imm = joinList(damageImmunities);
   const condImm = joinConditions(conditionImmunities);
+  const specials = Array.isArray(specialAbilities) ? specialAbilities : [];
 
   const hasAny =
     !!vul ||
@@ -65,12 +85,13 @@ export default function MonsterOther({
     !!languages ||
     (senses && (senses.blindsight || senses.darkvision || senses.tremorsense || senses.truesight || typeof senses.passive_perception === "number")) ||
     typeof challengeRating === "number" ||
-    typeof proficiencyBonus === "number";
+    typeof proficiencyBonus === "number" ||
+    specials.length > 0;
 
   if (!hasAny) return null;
 
   return (
-    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left">
+    <div className="px-4 py-3 rounded border border-zinc-200 dark:border-zinc-800 text-left w-[240px]">
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Other</div>
       <div className="space-y-1">
         {vul ? (
@@ -150,6 +171,23 @@ export default function MonsterOther({
           <div className="flex items-center justify-between">
             <span className="text-sm text-zinc-600 dark:text-zinc-300">Proficiency Bonus</span>
             <span className="text-sm font-semibold">+{proficiencyBonus}</span>
+          </div>
+        ) : null}
+        {specials.length > 0 ? (
+          <div>
+            <div className="text-sm text-zinc-600 dark:text-zinc-300 mb-1">Special Abilities</div>
+            <div className="space-y-1">
+              {specials.map((s, idx) => (
+                <div key={`${s.name ?? "special"}-${idx}`} className="grid grid-cols-2 gap-3 items-start">
+                  <span className="text-sm text-zinc-600 dark:text-zinc-300">
+                    {s.name ?? "Special Ability"}
+                  </span>
+                  <span className="text-sm font-medium break-words whitespace-normal">
+                    {s.desc ?? ""}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>
